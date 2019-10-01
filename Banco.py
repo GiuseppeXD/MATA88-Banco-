@@ -7,9 +7,21 @@ class Banco:
         f.close()
 
         return open("banco.txt", 'r+')
+
+    @staticmethod
+    def checkClient(rgClient):
+        file = Banco.openFile()
+        with file:
+            line = file.readline()
+            while line:
+                [username, rg, password, cash] = line.split('|')
+                if rg == rgClient:
+                    return 0
+                line = file.readline()
+        return 1
     
     @staticmethod
-    def ConsultarClient(rgClient, pwdClient):
+    def LoginClient(rgClient, pwdClient):
         file = Banco.openFile()
 
         with file:
@@ -90,28 +102,19 @@ class Banco:
 
         return 0
 
-    def mudarSaldo(self, rgcliente, valor):
-        f = open("banco.txt", 'r+')
-        with f:
-            line = f.readline()
-            anterior = 0
-            proximo = f.tell()
-            while line:
-                campos = line.split(' ')
-                if campos[0] == rgcliente:
-                    campos[3] = valor
-                    return campos[3]
-                line = f.readline()
-                anterior = proximo
-                proximo = f.tell()
-            print("Cliente Nao Encontrado")
-            return False
+    @staticmethod
+    def transfer(rg, value, rgDest):
+        if Banco.checkClient(rgDest) == 0:
+            if Banco.withdraw(rg, value) == 0:
+                if Banco.deposit(rgDest, value) == 0:
+                    print("Transferencia Realizada")
+                    return 0
+            else:
+                print("Transeferencia Nao Realizada, Saldo Insuficiente")
+                return 1
+        else:
+            print("Correntista Nao encontrado")
+            return 2
 
-    def salvarArquivo(self):
-        f = open("banco.txt", 'w')
-        with f:
-            for cliente in self.clientesSenhas:
-                f.write(str(cliente) + ' ' + str(self.clientesSenhas[cliente]) + ' '
-                        + str(self.clientesSaldos[cliente]) + '\n')
 
 

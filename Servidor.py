@@ -27,7 +27,7 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
 
         while True:
             [rg, password] = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET LOGIN SENDED BY CLIENT
-            res = Banco.ConsultarClient(rg, password) # QUERY BY A USER IN DATABASE
+            res = Banco.LoginClient(rg, password) # QUERY BY A USER IN DATABASE
 
             self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
             if res == 0: break # IF FIND A USER, LEAVE LOOP
@@ -46,9 +46,9 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
                 res = Banco.deposit(data[1], int(data[2]))
                 self.connection.send(bytes([res]))
 
-            if data[0] == '4':
-                conn.send(bytes("Bye !", 'utf-8'))
-                conn.send(bytes("Fodase por enquanto", 'utf-8'))
+            if data[0] == '3':
+                res = Banco.transfer(data[1], int(data[2]), data[3])
+                self.connection.send(bytes([res]))
 
 
 socketServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,7 +62,6 @@ while True:
     (conn, (host, port)) = socketServer.accept()
     newthread = ClientThread(host, port, conn)
     newthread.start()
-
     threads.append(newthread)
 
 for t in threads:

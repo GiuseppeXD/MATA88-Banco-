@@ -2,7 +2,7 @@ import socket
 
 # ----- START INITIAL SETTINGS -----
 
-HOST = '0.0.0.0'
+HOST = socket.gethostname()
 PORT = 5001
 BUFFER_SIZE = 2048
 
@@ -21,6 +21,7 @@ def handleAuth(statusCode):
 
 def showOperations():
     print('Operações: ')
+    print('0 - Sair')
     print('1 - Saque')
     print('2 - Depósito')
     print('3 - Transferência\n')
@@ -29,7 +30,7 @@ try:
     socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     socketClient.connect((HOST, PORT))
 
-except: 
+except:
     print('Erro ao conectar ao servidor.')
 
 data = ''
@@ -47,7 +48,7 @@ while True:
 
 showOperations()
 
-while data != "exit":
+while data != "0":
     data = input("Digite o número de uma operação: ")
     
     if data == '1':
@@ -77,8 +78,16 @@ while data != "exit":
     elif data == '3':
         value = input("Digite o valor a ser transferido: ")
         dest = input("Digite o RG do correntista: ")
-        socketClient.send(bytes(data+" "+value+" "+dest, 'utf-8'))
-        data = socketClient.recv(BUFFER_SIZE).decode("utf-8")
+        socketClient.send(bytes(" ".join([data,rg,value, dest]), 'utf-8'))
+        data = socketClient.recv(BUFFER_SIZE)
+        data = int.from_bytes(data, byteorder="big")
+
+        if data == 0:
+            print('Transferencia Realizada com sucesso!')
+        elif data == 1:
+            print('Saldo Insuficiente')
+        else:
+            print('Correntista nao encontrado')
     
     
    
