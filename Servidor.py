@@ -2,59 +2,68 @@ import socket
 from threading import Thread
 from Banco import Banco
 
-TCP_IP = '0.0.0.0'
-TCP_PORT = 5000
-BUFFER_SIZE = 20
-banco = Banco()
+# ----- START INITIAL SETTINGS -----
 
-class ClientThread(Thread):
-    def __init__(self, ip, port, conn):
+HOST = '0.0.0.0'
+PORT = 5001
+BUFFER_SIZE = 2048
+
+# ----------
+
+class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
+    def __init__(self, ip, port, connection):
         Thread.__init__(self)
+
+        # SET IP, PORT AND HANDLE CONNECTION TO CLIENT THREAD
         self.ip = ip
         self.port = port
-        self.conn = conn
+        self.connection = connection
         print("Thread Cliente Criada")
 
-    def run(self):
-        while True:
-            data = self.conn.recv(2048).decode("utf-8")
-            print(data)
-            campos = data.split(' ')
-            if campos[0] == "criar":
-                retorno = banco.CriarCliente(campos[1], campos[2], campos[3]) #Criar RG Senha Nome
-                if retorno:
-                    conn.send(bytes("Sucesso", 'utf-8'))
-                    break
-                else:
-                    conn.send(bytes("Usuario Ja Existente", 'utf-8'))
-            retorno = banco.ConsultarClient(campos[0], campos[1])
-            if  retorno == 1:
-                conn.send(bytes("Sucesso", 'utf-8'))
-                break
-            elif retorno == 2:
-                conn.send(bytes("Senha Incorreta", 'utf-8'))
-            else:
-                conn.send(bytes("Usuario Inexistente", 'utf-8'))
+    
+    def run(self): # ----- EXECUTION OF EACH CLIENT THREAD -----
+
+        # ----- GET DATA TO AUTHENTICATION SENDED OF CLIENT -----
 
         while True:
-            data = self.conn.recv(2048).decode("utf-8")
-            print(data)
-            if data == "exit":
+            [rg, password] = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET LOGIN SENDED BY CLIENT
+            res = Banco.ConsultarClient(rg, password) # QUERY BY A USER IN DATABASE
+
+            self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+            if res == 0: break # IF FIND A USER, LEAVE LOOP
+            
+
+        # ----- LOOP TO HANDLE OPERATIONS OF CLIENT -----
+
+        while True:
+            data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
+
+            if data[0] == '1':
+                res = Banco.withdraw(data[1], int(data[2]))
+                self.connection.send(bytes([res]))
+
+            if data[0] == '2':
+                res = Banco.deposit(data[1], int(data[2]))
+                self.connection.send(bytes([res]))
+
+            if data[0] == '4':
                 conn.send(bytes("Bye !", 'utf-8'))
-            conn.send(bytes("Fodase por enquanto", 'utf-8'))
+                conn.send(bytes("Fodase por enquanto", 'utf-8'))
 
 
-tcpServer =  socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcpServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-tcpServer.bind((TCP_IP, TCP_PORT))
+socketServer = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+socketServer.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+socketServer.bind((HOST, PORT))
 threads = []
 
 while True:
-    tcpServer.listen(4)
-    (conn, (ip, port)) = tcpServer.accept()
-    newthread = ClientThread(ip, port, conn)
-    threads.append(newthread)
+    socketServer.listen(1)
+
+    (conn, (host, port)) = socketServer.accept()
+    newthread = ClientThread(host, port, conn)
     newthread.start()
+
+    threads.append(newthread)
 
 for t in threads:
     t.join()

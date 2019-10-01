@@ -1,30 +1,92 @@
 import socket
 
-host = socket.gethostname()
-port = 5000
-BUFFER_SIZE = 2000
+# ----- START INITIAL SETTINGS -----
 
-tcpClientA = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-tcpClientA.connect((host, port))
+HOST = '0.0.0.0'
+PORT = 5001
+BUFFER_SIZE = 2048
+
+# ----------
+
+def handleAuth(statusCode):
+    if statusCode == 0:
+        print('\nLogin realizado com sucesso!\n')
+        return True
+    elif statusCode == 1:
+        print('\nSenha incorreta, por favor tente novamente.\n')
+        return False
+    elif statusCode == 2:
+        print('\nUsuário inexistente, por favor tente novamente.\n')
+        return False
+
+def showOperations():
+    print('Operações: ')
+    print('1 - Saque')
+    print('2 - Depósito')
+    print('3 - Transferência\n')
+
+try:
+    socketClient = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    socketClient.connect((HOST, PORT))
+
+except: 
+    print('Erro ao conectar ao servidor.')
 
 data = ''
 
-while data!="Sucesso":
-    usu = input("Usuario : ")
-    senha = input("Senha : ")
-    tcpClientA.send(bytes(usu + ' ' + senha, 'utf-8'))
-    data = tcpClientA.recv(BUFFER_SIZE).decode("utf-8")
-    print(data)
+while True:
+    rg = input("RG: ")
+    password = input("Senha: ")
 
-MESSAGE = ''
+    socketClient.send(bytes(rg + ' ' + password, 'utf-8'))
+    data = socketClient.recv(BUFFER_SIZE)
+    data = int.from_bytes(data, byteorder="big")
+    #print(data)
+    if handleAuth(data):
+        break
 
-while MESSAGE!="exit":
-    MESSAGE = input("Operacao : ")
-    tcpClientA.send(bytes(MESSAGE, 'utf-8'))
-    data = tcpClientA.recv(BUFFER_SIZE).decode("utf-8")
-    print(data)
+showOperations()
 
-tcpClientA.close()
+while data != "exit":
+    data = input("Digite o número de uma operação: ")
+    
+    if data == '1':
+        value = input("Digite o valor a ser sacado: ")
+        socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8'))
+        data = socketClient.recv(BUFFER_SIZE)
+        data = int.from_bytes(data, byteorder="big")
+        
+        if data == 0:
+            print('Saque efetuado com sucesso!')
+        elif data == 1:
+            print('Saldo insuficiente')
+        else:
+            print('Erro ao sacar')
+
+    elif data == '2':
+        value = input("Digite o valor a ser depositado: ")
+        socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8'))
+        data = socketClient.recv(BUFFER_SIZE)
+        data = int.from_bytes(data, byteorder="big")
+        
+        if data == 0:
+            print('Depósito efetuado com sucesso!')
+        else:
+            print('Erro ao depositar')
+
+    elif data == '3':
+        value = input("Digite o valor a ser transferido: ")
+        dest = input("Digite o RG do correntista: ")
+        socketClient.send(bytes(data+" "+value+" "+dest, 'utf-8'))
+        data = socketClient.recv(BUFFER_SIZE).decode("utf-8")
+    
+    
+   
+
+socketClient.close()
+
+
+
 
 
 

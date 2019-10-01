@@ -1,45 +1,94 @@
 
 
 class Banco:
-    def __init__(self):
+    @staticmethod
+    def openFile():
         f = open("banco.txt", 'a')
         f.close()
 
-    def ConsultarClient(self, rgcliente, senha):
-        f = open("banco.txt", 'r')
-        with f:
-            line = f.readline()
+        return open("banco.txt", 'r+')
+    
+    @staticmethod
+    def ConsultarClient(rgClient, pwdClient):
+        file = Banco.openFile()
+
+        with file:
+            line = file.readline()
+
             while line:
-                campos = line.split(' ')
-                if campos[0] == rgcliente:
-                    print("Cliente Encontrado")
-                    if campos[1] == senha:
+                [username, rg, password, cash] = line.split('|')
+
+                if rg == rgClient:
+                    print("Cliente encontrado")
+                    if password == pwdClient:
                         print("Acesso permitido")
-                        return 1
+                        return 0
                     else:
-                        print("Senha Incorreta")
-                        return 2
-                line = f.readline()
-            print("Cliente Nao Encontrado")
-            return 3
+                        print("Senha incorreta")
+                        return 1
+
+                line = file.readline()
+
+            print("Cliente não encontrado")
+            return 2
 
 
 
 
+    @staticmethod
+    def getCash(file, rg):
+        for line in file:
+            if rg in line:
+                return int(line.split('|')[3])
 
-    def ConsultarSaldo(self, rgcliente, printar=False):
-        f = open("banco.txt", 'r')
-        with f:
-            line = f.readline()
-            while line:
-                campos = line.split(' ')
-                if campos[0] == rgcliente:
-                    if printar:
-                        print("Cliente : ", campos[2], " Saldo Atual : ", campos[3])
-                    return campos[3]
-                line = f.readline()
-            print("Cliente Nao Encontrado")
-            return False
+    @staticmethod
+    def withdraw(rg, value):
+        file = Banco.openFile()
+        cash = Banco.getCash(file, rg)
+
+        if cash < value:
+            print('Saldo insuficiente')
+            return 1
+        
+        cash -= value
+
+        lines = []
+        file.seek(0,0)
+        for line in file:
+            if not rg in line:
+                lines.append(line)
+            else:
+                [user, rg, pwd, oldCash] = line.split('|')
+                lines.append("|".join([user, rg, pwd, str(cash)+"\n"]))
+
+        file.seek(0, 0)
+        file.truncate()
+        file.writelines(lines)
+        file.close()
+
+        return 0
+    
+    @staticmethod
+    def deposit(rg, value):
+        file = Banco.openFile()
+        cash = Banco.getCash(file, rg)
+        cash += value
+
+        lines = []
+        file.seek(0, 0)
+        for line in file:
+            if not rg in line:
+                lines.append(line)
+            else:
+                [user, rg, pwd, oldCash] = line.split('|')
+                lines.append("|".join([user, rg, pwd, str(cash)+"\n"]))
+
+        file.seek(0, 0)
+        file.truncate()
+        file.writelines(lines)
+        file.close()
+
+        return 0
 
     def mudarSaldo(self, rgcliente, valor):
         f = open("banco.txt", 'r+')
