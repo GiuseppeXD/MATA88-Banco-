@@ -22,41 +22,56 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
         self.ip = ip
         self.port = port
         self.connection = connection
-        print("Thread Cliente "+str(id)+" criada\n")
+        print("Thread Cliente "+str(id)+" criada")
 
     
     def run(self): # ----- EXECUTION OF EACH CLIENT THREAD -----
 
-        # ----- LOOP TO GET DATA TO AUTHENTICATION SENDED OF CLIENT -----
-
         while True:
-            [rg, password] = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET LOGIN SENDED BY CLIENT
-            res = Banco.login(rg, password) # QUERY BY A USER IN DATABASE
+            # ----- LOOP TO GET DATA TO AUTHENTICATION SENDED OF CLIENT -----
 
-            self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
-            if res == 0: break # IF FIND A USER, LEAVE LOOP
-            
+            while True:
+                data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET DATA SENDED BY CLIENT
 
-        # ----- LOOP TO HANDLE OPERATIONS OF CLIENT -----
+                if data[0] == '1': # LOGIN OPTION
+                    res = Banco.login(data[1], data[2]) # QUERY BY A USER IN DATABASE
 
-        while True:
-            data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
+                    self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+                    if res == 0: break # IF FIND A USER, LEAVE LOOP
 
-            if data[0] == '1': # OPERATION WITHDRAW
-                res = Banco.withdraw(data[1], int(data[2])) # WITHDRAWING MONEY
-                self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+                elif data[0] == '2': # REGISTER OPTION
+                    res = Banco.register(data[1], data[2], data[3]) # REGISTER A USER IN DATABASE
 
-            elif data[0] == '2': # OPERATION DEPOSIT
-                res = Banco.deposit(data[1], int(data[2])) # DEPOSITING MONEY
-                self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+                    self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
 
-            elif data[0] == '3': # OPERATION TRANSFER
-                res = Banco.transfer(data[1], int(data[2]), data[3]) # TRANSFERING MONEY TO ANOTHER CLIENT
-                self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
-            else: # ANOTHER OPERATION CLOSES THE CONNECTION
-                print("Thread Cliente "+str(self.id)+" fechada\n")
-                self.connection.close()
-                break
+                else: # ANOTHER OPTION
+                    print("Thread Cliente "+str(self.id)+" fechada")
+                    self.connection.close()
+                    return
+                
+
+            # ----- LOOP TO HANDLE OPERATIONS OF CLIENT -----
+
+            while True:
+                data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
+
+                if data[0] == '1': # OPERATION WITHDRAW
+                    res = Banco.withdraw(data[1], int(data[2])) # WITHDRAWING MONEY
+                    self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+
+                elif data[0] == '2': # OPERATION DEPOSIT
+                    res = Banco.deposit(data[1], int(data[2])) # DEPOSITING MONEY
+                    self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+
+                elif data[0] == '3': # OPERATION TRANSFER
+                    res = Banco.transfer(data[1], int(data[2]), data[3]) # TRANSFERING MONEY TO ANOTHER CLIENT
+                    self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
+                elif data[0] == '4': # OPERATION LOGOUT
+                    break
+                else: # ANOTHER OPERATION CLOSES THE CONNECTION
+                    print("Thread Cliente "+str(self.id)+" fechada")
+                    self.connection.close()
+                    return
 
 
 # ----- INITIALIZES SOCKET CONFIGURATION -----

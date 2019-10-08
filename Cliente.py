@@ -8,23 +8,144 @@ BUFFER_SIZE = 2048
 
 # ----------
 
-def handleAuth(statusCode): # FUNCTION TO HANDLE STATUS CODE RETURNED BY SERVER
+def handleRegister(statusCode):
     if statusCode == 0:
-        print('\nLogin realizado com sucesso!\n')
+        print('\nUsuário cadastrado com sucesso!')
         return True
     elif statusCode == 1:
-        print('\nSenha incorreta, por favor tente novamente.\n')
-        return False
-    elif statusCode == 2:
-        print('\nUsuário inexistente, por favor tente novamente.\n')
+        print('\nJá existe um usuário com este RG.')
         return False
 
+def handleAuth(statusCode): # FUNCTION TO HANDLE STATUS CODE RETURNED BY SERVER
+    if statusCode == 0:
+        print('\nLogin realizado com sucesso!')
+        return True
+    elif statusCode == 1:
+        print('\nSenha incorreta.')
+        return False
+    elif statusCode == 2:
+        print('\nUsuário inexistente.')
+        return False
+
+def showOptions(): # FUNCTION TO SHOW OPTIONS TO CLIENT
+    print('\nOpções: ')
+    print('1 - Login')
+    print('2 - Cadastrar')
+    print('3 - Sair\n')
+
 def showOperations(): # FUNCTION TO SHOW OPERATION TO CLIENT
-    print('Operações: ')
+    print('\nOperações: ')
     print('1 - Saque')
     print('2 - Depósito')
     print('3 - Transferência')
     print('4 - Logout\n')
+
+def register():
+    while True:
+        nome = input("Nome: ")
+        rg = input("RG: ")
+        password = input("Senha: ")
+        socketClient.send(bytes('2 ' + nome + ' ' + rg + ' ' + password, 'utf-8')) # SEND DATA TO SERVER
+        
+        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+        if not data: # HANDLE DATA
+            raise
+
+        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+
+        if handleRegister(data) == False:
+            tryAgain = input('Deseja tentar novamente? (y/n) ')
+            if tryAgain == 'y':
+                continue
+            else:
+                break
+        else: 
+            break
+def login():
+    while True:
+        rg = input("RG: ")
+        password = input("Senha: ")
+        socketClient.send(bytes('1 ' + rg + ' ' + password, 'utf-8')) # SEND DATA TO SERVER
+        
+        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+        if not data: # HANDLE DATA
+            raise
+
+        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+
+        if handleAuth(data) == False:
+            tryAgain = input('Deseja tentar novamente? (y/n) ')
+            if tryAgain == 'y':
+                continue
+            else:
+                break
+        else: 
+            break
+    
+    while True:
+        showOperations()
+        data = input("Digite o número de uma operação: ")
+        
+        if data == '1': # OPERATION WITHDRAW
+            value = input("Digite o valor a ser sacado: ")
+            socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
+            data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+            if not data: # HANDLE DATA
+                raise
+
+            data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+            
+            if data == 0:
+                print('\nSaque efetuado com sucesso!')
+            elif data == 1:
+                print('\nSaldo insuficiente.')
+            else:
+                print('\nErro ao sacar.')
+
+        elif data == '2': # OPERATION DEPOSIT
+            value = input("Digite o valor a ser depositado: ")
+            socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
+
+            data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+            
+            if not data: # HANDLE DATA
+                raise
+
+            data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+            
+            if data == 0:
+                print('\nDepósito efetuado com sucesso!')
+            else:
+                print('\nErro ao depositar.')
+
+        elif data == '3': # OPERATION TRANSFER
+            value = input("Digite o valor a ser transferido: ")
+            dest = input("Digite o RG do correntista: ")
+            socketClient.send(bytes(" ".join([data,rg,value, dest]), 'utf-8')) # SEND DATA TO SERVER
+
+            data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+            if not data: # HANDLE DATA
+                raise
+
+            data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+
+            if data == 0:
+                print('\nTransferência realizada com sucesso!')
+            elif data == 1:
+                print('\nSaldo insuficiente.')
+            else:
+                print('\nCorrentista não encontrado.')
+        elif data == '4': 
+            socketClient.send(bytes('4', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNECTION
+            break
+        else:
+            print('Operação inválida.')
+
+    print('\nLogout feito com sucesso!')
 
 # ----- INITIALIZES SOCKET CONFIGURATION -----
 
@@ -33,76 +154,36 @@ try:
     socketClient.connect((HOST, PORT))
 except:
     print('Erro ao conectar ao servidor.')
+    exit(0)
 
 # ----- MAKE LOGIN -----
 
 data = ''
+print('Bem vindo ao nosso banco! =D')
 
-while True:
-    rg = input("RG: ")
-    password = input("Senha: ")
-    socketClient.send(bytes(rg + ' ' + password, 'utf-8')) # SEND DATA TO SERVER
-
-    data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
-    data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
-
-    if handleAuth(data):
-        break
-
-# ----------
-
-showOperations()
-
-# ----- HANDLES CLIENT OPERATIONS -----
-
-while data != '4':
-    data = input("Digite o número de uma operação: ")
+try:
     
-    if data == '1': # OPERATION WITHDRAW
-        value = input("Digite o valor a ser sacado: ")
-        socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
+    while True:
+        showOptions()
+        data = input("Digite o número de uma opção: ")
 
-        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
-        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
-        
-        if data == 0:
-            print('Saque efetuado com sucesso!\n')
-        elif data == 1:
-            print('Saldo insuficiente\n')
+        if data == '1':
+            login()
+        elif data == '2':
+            register()
+        elif data == '3':
+            break
         else:
-            print('Erro ao sacar\n')
+            print('Opção inválida.')
 
-    elif data == '2': # OPERATION DEPOSIT
-        value = input("Digite o valor a ser depositado: ")
-        socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
 
-        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
-        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
-        
-        if data == 0:
-            print('Depósito efetuado com sucesso!\n')
-        else:
-            print('Erro ao depositar\n')
+except:
+    print('Algum erro ocorreu ao enviar ou receber dados do servidor.')
+    exit(0)
 
-    elif data == '3': # OPERATION TRANSFER
-        value = input("Digite o valor a ser transferido: ")
-        dest = input("Digite o RG do correntista: ")
-        socketClient.send(bytes(" ".join([data,rg,value, dest]), 'utf-8')) # SEND DATA TO SERVER
 
-        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
-        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
-
-        if data == 0:
-            print('Transferência realizada com sucesso!\n')
-        elif data == 1:
-            print('Saldo insuficiente\n')
-        else:
-            print('Correntista não encontrado')
-
-# ----------
-
-socketClient.send(bytes('4', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNECTION
-print('\nLogout feito com sucesso!\n')
+socketClient.send(bytes('3', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNECTION
+print('\nAté a próxima!')
 
 socketClient.close()
 

@@ -17,9 +17,12 @@ class Banco:
             while line: 
                 [username, rg, password, cash] = line.split('|') # GET DATA OF A CLIENT
                 if rg == rgClient: # VERIFY IF RG IS EQUAL
+                    file.close()
                     return 0
 
                 line = file.readline()
+
+        file.close()
         return 1
     
     @staticmethod
@@ -34,18 +37,41 @@ class Banco:
 
                 # VERIFY IF CLIENT EXIST IN FILE
                 if rg == rgClient:
-                    print("Cliente encontrado")
+                    print("Usuário encontrado")
                     if password == pwdClient:
                         print("Acesso permitido")
+                        file.close()
                         return 0
                     else:
                         print("Senha incorreta")
+                        file.close()
                         return 1
 
                 line = file.readline()
 
-            print("Cliente não encontrado")
+            print("Usuário não encontrado")
+            file.close()
             return 2
+        
+        
+    
+    @staticmethod
+    def register(name, rg, pwd):
+        file = Banco.openFile()
+        file.seek(0,2)
+        if Banco.checkClient(rg) == 0:
+            print('RG já cadastrado')
+            return 1
+
+        file.seek(file.tell()-1, 0)
+        c = file.read(1)
+        if c != '\n':
+            file.write('\n')
+
+        file.write("|".join([name, rg, pwd, "0\n"]))
+        file.close()
+        print('Usuário ' + name + ' cadastrado')
+        return 0
 
     @staticmethod
     def getCash(file, rg): # GET CASH OF A CLIENT
@@ -60,6 +86,7 @@ class Banco:
         cash = Banco.getCash(file, rg) 
         if cash < value: # IF CASH IS LESS THAN VALUE, RETURNS
             print('Saldo insuficiente')
+            file.close()
             return 1
         
         cash -= value # ELSE TAKE VALUE OF CASH
@@ -117,7 +144,6 @@ class Banco:
                     print("Transferência efetuada")
                     return 0
             else:
-                print("Saldo insuficiente")
                 return 1
         else:
             print("Correntista não encontrado")
