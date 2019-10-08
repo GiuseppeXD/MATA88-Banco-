@@ -1,56 +1,97 @@
-
+# ----- CLASS REPRESENTING THE DATABASE ----- 
 
 class Banco:
     @staticmethod
-    def openFile():
+    def openFile(): # METHOD TO OPEN FILE 
         f = open("banco.txt", 'a')
         f.close()
 
         return open("banco.txt", 'r+')
-    
+
     @staticmethod
-    def ConsultarClient(rgClient, pwdClient):
+    def checkClient(rgClient): # CHECKS IF A CLIENT EXIST
         file = Banco.openFile()
 
         with file:
-            line = file.readline()
+            line = file.readline() # GET A LINE OF FILE
+            while line: 
+                [username, rg, password, cash] = line.split('|') # GET DATA OF A CLIENT
+                if rg == rgClient: # VERIFY IF RG IS EQUAL
+                    file.close()
+                    return 0
+
+                line = file.readline()
+
+        file.close()
+        return 1
+    
+    @staticmethod
+    def login(rgClient, pwdClient): # LOGIN A CLIENT
+        file = Banco.openFile()
+
+        with file:
+            line = file.readline() # GET A LINE OF FILE
 
             while line:
-                [username, rg, password, cash] = line.split('|')
+                [username, rg, password, cash] = line.split('|') # GET DATA OF A CLIENT
 
+                # VERIFY IF CLIENT EXIST IN FILE
                 if rg == rgClient:
-                    print("Cliente encontrado")
+                    print("Usuário encontrado")
                     if password == pwdClient:
                         print("Acesso permitido")
+                        file.close()
                         return 0
                     else:
                         print("Senha incorreta")
+                        file.close()
                         return 1
 
                 line = file.readline()
 
-            print("Cliente não encontrado")
+            print("Usuário não encontrado")
+            file.close()
             return 2
+        
+        
+    
+    @staticmethod
+    def register(name, rg, pwd):
+        file = Banco.openFile()
+        file.seek(0,2)
+        if Banco.checkClient(rg) == 0:
+            print('RG já cadastrado')
+            return 1
 
+        file.seek(file.tell()-1, 0)
+        c = file.read(1)
+        if c != '\n':
+            file.write('\n')
 
-
+        file.write("|".join([name, rg, pwd, "0\n"]))
+        file.close()
+        print('Usuário ' + name + ' cadastrado')
+        return 0
 
     @staticmethod
-    def getCash(file, rg):
+    def getCash(file, rg): # GET CASH OF A CLIENT
         for line in file:
             if rg in line:
                 return int(line.split('|')[3])
 
     @staticmethod
-    def withdraw(rg, value):
+    def withdraw(rg, value): # WITHDRAW MONEY OF A CLIENT
         file = Banco.openFile()
-        cash = Banco.getCash(file, rg)
 
-        if cash < value:
+        cash = Banco.getCash(file, rg) 
+        if cash < value: # IF CASH IS LESS THAN VALUE, RETURNS
             print('Saldo insuficiente')
+            file.close()
             return 1
         
-        cash -= value
+        cash -= value # ELSE TAKE VALUE OF CASH
+
+        # ----- REWRITE FILE WITH NEW CASH OF CLIENT ----
 
         lines = []
         file.seek(0,0)
@@ -65,14 +106,18 @@ class Banco:
         file.truncate()
         file.writelines(lines)
         file.close()
+        print('Saque efetuado')
 
         return 0
     
     @staticmethod
-    def deposit(rg, value):
+    def deposit(rg, value): # DEPOSIT MONEY OF A CLIENT
         file = Banco.openFile()
+
         cash = Banco.getCash(file, rg)
-        cash += value
+        cash += value # INCREMENTS VALUE IN CASH
+
+        # ----- REWRITE FILE WITH NEW CASH OF CLIENT ----
 
         lines = []
         file.seek(0, 0)
@@ -87,31 +132,22 @@ class Banco:
         file.truncate()
         file.writelines(lines)
         file.close()
+        print('Depósito efetuado')
 
         return 0
 
-    def mudarSaldo(self, rgcliente, valor):
-        f = open("banco.txt", 'r+')
-        with f:
-            line = f.readline()
-            anterior = 0
-            proximo = f.tell()
-            while line:
-                campos = line.split(' ')
-                if campos[0] == rgcliente:
-                    campos[3] = valor
-                    return campos[3]
-                line = f.readline()
-                anterior = proximo
-                proximo = f.tell()
-            print("Cliente Nao Encontrado")
-            return False
+    @staticmethod
+    def transfer(rg, value, rgDest): # DEPOSIT MONEY FROM A CLIENT TO ANOTHER CLIENT
+        if Banco.checkClient(rgDest) == 0: # CHECKS IF RG OF RECIPIENT EXIST
+            if Banco.withdraw(rg, value) == 0: # WITHDRAW MONEY
+                if Banco.deposit(rgDest, value) == 0: # DEPOSIT MONEY TO RECIPIENT
+                    print("Transferência efetuada")
+                    return 0
+            else:
+                return 1
+        else:
+            print("Correntista não encontrado")
+            return 2
 
-    def salvarArquivo(self):
-        f = open("banco.txt", 'w')
-        with f:
-            for cliente in self.clientesSenhas:
-                f.write(str(cliente) + ' ' + str(self.clientesSenhas[cliente]) + ' '
-                        + str(self.clientesSaldos[cliente]) + '\n')
 
 
