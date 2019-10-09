@@ -4,7 +4,7 @@
 * Giuseppe Luca Mareschi Outerelo
 
 ### Descrição
-Trabalho de Sistemas Distribuídos - Simulação banco-servidor com threads para atender clientes.
+Trabalho de Sistemas Distribuídos - Simulação de um sistema bancário que utiliza modelo cliente-servidor com multithreading.
 
 ### Inicialização:
 Em computadores diferentes deve-se recuperar o ip da máquina que executará **Servidor.py** e coloca-lo no campo **HOST** do **Cliente.py**. Num mesmo computador deve-se abrir um terminal e executar o **Servidor.py**, após isso cada novo terminal executando **Cliente.py** será um cliente.
