@@ -1,5 +1,5 @@
 import socket
-
+import struct
 # ----- START INITIAL SETTINGS -----
 
 HOST = socket.gethostname()
@@ -35,6 +35,7 @@ def showOptions(): # FUNCTION TO SHOW OPTIONS TO CLIENT
 
 def showOperations(): # FUNCTION TO SHOW OPERATION TO CLIENT
     print('\nOperações: ')
+    print('0 - Saldo')
     print('1 - Saque')
     print('2 - Depósito')
     print('3 - Transferência')
@@ -87,8 +88,21 @@ def login():
     while True:
         showOperations()
         data = input("Digite o número de uma operação: ")
+
+        if data == '0':
+            socketClient.send(bytes(" ".join([data,rg]), 'utf-8')) # SEND DATA TO SERVER
+            data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+            if not data: # HANDLE DATA
+                raise
+
+            data1 = struct.unpack('i', data)
+
+            print('Seu Saldo atual é de :', data1[0]);
+
+
         
-        if data == '1': # OPERATION WITHDRAW
+        elif data == '1': # OPERATION WITHDRAW
             value = input("Digite o valor a ser sacado: ")
             socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
             data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER

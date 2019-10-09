@@ -74,6 +74,16 @@ class Banco:
         return 0
 
     @staticmethod
+    def queryCash(rg):
+        file = Banco.openFile()
+
+        cash = Banco.getCash(file, rg) 
+
+        file.close()
+
+        return cash
+
+    @staticmethod
     def getCash(file, rg): # GET CASH OF A CLIENT
         for line in file:
             if rg in line:
