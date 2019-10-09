@@ -84,16 +84,19 @@ class Banco:
         return cash
 
     @staticmethod
-    def getCash(file, rg): # GET CASH OF A CLIENT
+    def getCash(file, rgClient): # GET CASH OF A CLIENT
         for line in file:
-            if rg in line:
-                return int(line.split('|')[3])
+            [username, rg, password, cash] = line.split('|')
+            if rg == rgClient:
+                return int(cash)
+        
+        return 0
 
     @staticmethod
-    def withdraw(rg, value): # WITHDRAW MONEY OF A CLIENT
+    def withdraw(rgClient, value): # WITHDRAW MONEY OF A CLIENT
         file = Banco.openFile()
 
-        cash = Banco.getCash(file, rg) 
+        cash = Banco.getCash(file, rgClient) 
         if cash < value: # IF CASH IS LESS THAN VALUE, RETURNS
             print('Saldo insuficiente')
             file.close()
@@ -106,11 +109,11 @@ class Banco:
         lines = []
         file.seek(0,0)
         for line in file:
-            if not rg in line:
+            [username, rg, password, oldCash] = line.split('|')
+            if rg != rgClient:
                 lines.append(line)
             else:
-                [user, rg, pwd, oldCash] = line.split('|')
-                lines.append("|".join([user, rg, pwd, str(cash)+"\n"]))
+                lines.append("|".join([username, rg, password, str(cash)+"\n"]))
 
         file.seek(0, 0)
         file.truncate()
@@ -121,10 +124,10 @@ class Banco:
         return 0
     
     @staticmethod
-    def deposit(rg, value): # DEPOSIT MONEY OF A CLIENT
+    def deposit(rgClient, value): # DEPOSIT MONEY OF A CLIENT
         file = Banco.openFile()
 
-        cash = Banco.getCash(file, rg)
+        cash = Banco.getCash(file, rgClient)
         cash += value # INCREMENTS VALUE IN CASH
 
         # ----- REWRITE FILE WITH NEW CASH OF CLIENT ----
@@ -132,11 +135,11 @@ class Banco:
         lines = []
         file.seek(0, 0)
         for line in file:
-            if not rg in line:
+            [username, rg, password, oldCash] = line.split('|')
+            if rg != rgClient:
                 lines.append(line)
             else:
-                [user, rg, pwd, oldCash] = line.split('|')
-                lines.append("|".join([user, rg, pwd, str(cash)+"\n"]))
+                lines.append("|".join([username, rg, password, str(cash)+"\n"]))
 
         file.seek(0, 0)
         file.truncate()

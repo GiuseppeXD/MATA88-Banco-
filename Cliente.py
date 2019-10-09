@@ -98,7 +98,7 @@ def login():
 
             data1 = struct.unpack('i', data)
 
-            print('Seu Saldo atual é de :', data1[0]);
+            print('Seu saldo atual é de:', data1[0]);
 
 
         

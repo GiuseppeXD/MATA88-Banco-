@@ -57,8 +57,8 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
             while True:
                 data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
 
-                if data[0] == '0': # OPERATION WITHDRAW
-                    res = Banco.queryCash(data[1]) # QUERRYCASH MONEY
+                if data[0] == '0': # OPERATION QUERY CASH
+                    res = Banco.queryCash(data[1]) # QUERY CASH MONEY
                     res = struct.pack('i', res)
                     self.connection.send(res) # SEND RESPONSE OF DATABASE TO CLIENT
 
