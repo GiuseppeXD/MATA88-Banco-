@@ -1,4 +1,9 @@
-# MATA88-Banco-
+# Gestor de Contas Bancárias - MATA88 2019.2
+### Integrantes
+* Igor de Almeida Nascimento
+* Giuseppe Luca Mareschi Outerelo
+
+### Descrição
 Trabalho de Sistemas Distribuídos - Simulação banco-servidor com threads para atender clientes.
 
 ### Inicialização:
