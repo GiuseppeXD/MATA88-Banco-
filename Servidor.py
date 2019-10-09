@@ -1,8 +1,10 @@
 import socket
+import struct
 from _thread import *
 from threading import Thread 
 from socketserver import ThreadingMixIn 
 from Banco import Banco
+
 
 # ----- START INITIAL SETTINGS -----
 
@@ -55,7 +57,12 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
             while True:
                 data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
 
-                if data[0] == '1': # OPERATION WITHDRAW
+                if data[0] == '0': # OPERATION QUERY CASH
+                    res = Banco.queryCash(data[1]) # QUERY CASH MONEY
+                    res = struct.pack('i', res)
+                    self.connection.send(res) # SEND RESPONSE OF DATABASE TO CLIENT
+
+                elif data[0] == '1': # OPERATION WITHDRAW
                     res = Banco.withdraw(data[1], int(data[2])) # WITHDRAWING MONEY
                     self.connection.send(bytes([res])) # SEND RESPONSE OF DATABASE TO CLIENT
 
