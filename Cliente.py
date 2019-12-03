@@ -1,35 +1,32 @@
 import socket
 import struct
 import time
+import threading
 from threading import Thread
 # ----- START INITIAL SETTINGS -----
 
 HOST = socket.gethostname()
 PORT = 5002
 BUFFER_SIZE = 2048
-STATE = ''
-SAVED_STATE = False
-
-class Reset_State(Thread):
-    def __init__(self):
-        Thread.__init__(self)
-        time.sleep(15000)
-        SAVED_STATE = False
-        print('foda')
 
 # ----------
 
 class RecvThread(Thread):
     def __init__(self):
         Thread.__init__(self)
+        self.waiting_response = False
+        self.saved_state = False
+        self.messages = []
+
     def run(self):
         while True:
             try:
                 data = socketClient.recv(BUFFER_SIZE).decode("utf-8").split(' ')
+
                 if data[0] == "save":
                     self.recvMark()
                 else:
-                    if SAVED_STATE:
+                    if self.saved_state:
                         self.messages.append(data)
                     if data[0] == 'QUERY':
                         queryResponse(data)
@@ -42,35 +39,34 @@ class RecvThread(Thread):
                     if data[0] == 'LOGOUT':
                         socketClient.setblocking(True)
                         break
-                    self.sendMark()
 
+                    if self.saved_state == False:
+                        self.sendMark()
 
-
-
-
+                    self.waiting_response = False
             except:
                 pass
+    
+    def resetState(self):
+        if self.saved_state:
+            time.sleep(10)
+            self.saved_state = False
 
     def sendMark(self):
+        print('\nMessagens no Canal: ', self.messages, '\n')
+        self.messages = [] 
+        self.saved_state = True
+        
         socketClient.send(bytes('save', 'utf-8'))
-        SAVED_STATE = True
-        reset = Reset_State()
+        reset = threading.Thread(target = self.resetState)
         reset.start()
-        print("Estado do Cliente :" + STATE)
+
 
     def recvMark(self):
-        if not SAVED_STATE:
-            self.sendMark()
-        else:
-            print('Messagens no Canal: ')
-            for message in self.messages:
-                print(message)
-            self.messages = []
+        if self.saved_state == False:
+            self.sendMark()                
 
-
-
-
-
+        
 def handleRegister(statusCode):
     if statusCode == 0:
         print('\nUsuário cadastrado com sucesso!')
@@ -91,18 +87,10 @@ def handleAuth(statusCode): # FUNCTION TO HANDLE STATUS CODE RETURNED BY SERVER
         return False
 
 def showOptions(): # FUNCTION TO SHOW OPTIONS TO CLIENT
-    print('\nOpções: ')
-    print('1 - Login')
-    print('2 - Cadastrar')
-    print('3 - Sair\n')
+    print('\nOpções: \n1 - Login\n2 - Cadastrar\n3 - Sair\n')
 
 def showOperations(): # FUNCTION TO SHOW OPERATION TO CLIENT
-    print('\nOperações: ')
-    print('0 - Saldo')
-    print('1 - Saque')
-    print('2 - Depósito')
-    print('3 - Transferência')
-    print('4 - Logout\n')
+    print('\nOperações: \n0 - Saldo\n1 - Saque\n2 - Depósito\n3 - Transferência\n4 - Logout\n')
 
 def register():
     while True:
@@ -128,7 +116,6 @@ def register():
             break
 
 def queryResponse(data):
-
     print('Seu saldo atual é de:', int(data[1]))
 
 def withdrawingResponse(data):
@@ -179,7 +166,7 @@ def login():
             if tryAgain == 'y':
                 continue
             else:
-                break
+                return
         else:
             break
 
@@ -195,7 +182,9 @@ def login():
             socketClient.send(bytes(" ".join([data,rg]), 'utf-8')) # SEND DATA TO SERVER
             #data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
 
-
+            recv.waiting_response = True
+            while recv.waiting_response == True:
+                pass
         
         elif data == '1': # OPERATION WITHDRAW
             value = input("Digite o valor a ser sacado: ")
