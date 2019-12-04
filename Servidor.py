@@ -28,6 +28,7 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
         self.connection = connection
         self.saved_state = False
         self.messages = []
+        self.last_message = ''
 
         print("Thread Cliente "+str(id)+" criada")
 
@@ -36,12 +37,13 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
         self.saved_state = False
 
     def sendMark(self):
+        self.messages = []
+        print('\nEstado do Servidor: ', self.last_message,'\n' )
         print('\nMessagens no Canal: ', self.messages, '\n')
-        self.messages = [] 
         self.saved_state = True
 
         for conn in LIST_CLIENTS:
-            conn.send(bytes("save", "utf-8"))
+            conn.send(bytes('save', 'utf-8'))
 
         reset = threading.Thread(target = self.resetState)
         reset.start()
@@ -78,7 +80,13 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
             while True:
                 STATE = data
                 data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
-                self.messages.append(data)
+
+                if data[0] != 'save' and not self.saved_state:
+                    self.last_message = data
+
+                elif data[0] != 'save' and self.saved_state:
+                    self.messages.append(data)
+                    print('\nMessagens no Canal: ', self.messages, '\n')
 
                 if data[0] == '0': # OPERATION QUERY CASH
                     res = Banco.queryCash(data[1]) # QUERY CASH MONEY
@@ -104,12 +112,15 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
                     if self.saved_state == False:
                         self.sendMark()
 
+
                 else: # ANOTHER OPERATION CLOSES THE CONNECTION
                     print("Thread Cliente "+str(self.id)+" fechada")
                     self.connection.close()
                     LIST_CLIENTS.remove(self.connection)
 
                     return
+
+
         
 
 

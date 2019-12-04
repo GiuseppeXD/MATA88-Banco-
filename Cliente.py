@@ -23,11 +23,14 @@ class RecvThread(Thread):
             try:
                 data = socketClient.recv(BUFFER_SIZE).decode("utf-8").split(' ')
 
+                self.last_message = data
+
                 if data[0] == "save":
                     self.recvMark()
                 else:
                     if self.saved_state:
                         self.messages.append(data)
+                        print('\nMessagens no Canal: ', self.messages, '\n')
                     if data[0] == 'QUERY':
                         queryResponse(data)
                     if data[0] == 'WITHDRAWING':
@@ -53,8 +56,9 @@ class RecvThread(Thread):
             self.saved_state = False
 
     def sendMark(self):
+        self.messages = []
+        print('Estado do Cliente: ', self.last_message, '\n')
         print('\nMessagens no Canal: ', self.messages, '\n')
-        self.messages = [] 
         self.saved_state = True
         
         socketClient.send(bytes('save', 'utf-8'))
