@@ -92,29 +92,6 @@ def showOptions(): # FUNCTION TO SHOW OPTIONS TO CLIENT
 def showOperations(): # FUNCTION TO SHOW OPERATION TO CLIENT
     print('\nOperações: \n0 - Saldo\n1 - Saque\n2 - Depósito\n3 - Transferência\n4 - Logout\n')
 
-def register():
-    while True:
-        nome = input("Nome: ")
-        rg = input("RG: ")
-        password = input("Senha: ")
-        socketClient.send(bytes('2 ' + nome + ' ' + rg + ' ' + password, 'utf-8')) # SEND DATA TO SERVER
-        
-        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
-
-        if not data: # HANDLE DATA
-            raise
-
-        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
-
-        if handleRegister(data) == False:
-            tryAgain = input('Deseja tentar novamente? (y/n) ')
-            if tryAgain == 'y':
-                continue
-            else:
-                break
-        else: 
-            break
-
 def queryResponse(data):
     print('Seu saldo atual é de:', int(data[1]))
 
@@ -147,6 +124,29 @@ def transferResponse(data):
         print('\nSaldo insuficiente.\n')
     else:
         print('\nCorrentista não encontrado.\n')
+
+def register():
+    while True:
+        nome = input("Nome: ")
+        rg = input("RG: ")
+        password = input("Senha: ")
+        socketClient.send(bytes('2 ' + nome + ' ' + rg + ' ' + password, 'utf-8')) # SEND DATA TO SERVER
+        
+        data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+
+        if not data: # HANDLE DATA
+            raise
+
+        data = int.from_bytes(data, byteorder="big") # TRANSFORM DATA TO INT
+
+        if handleRegister(data) == False:
+            tryAgain = input('Deseja tentar novamente? (y/n) ')
+            if tryAgain == 'y':
+                continue
+            else:
+                break
+        else: 
+            break
 
 def login():
     while True:
@@ -191,6 +191,10 @@ def login():
             socketClient.send(bytes(" ".join([data,rg,value]), 'utf-8')) # SEND DATA TO SERVER
             #data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
 
+            recv.waiting_response = True
+            while recv.waiting_response == True:
+                pass
+
 
         elif data == '2': # OPERATION DEPOSIT
             value = input("Digite o valor a ser depositado: ")
@@ -198,6 +202,9 @@ def login():
 
             #data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
 
+            recv.waiting_response = True
+            while recv.waiting_response == True:
+                pass
 
         elif data == '3': # OPERATION TRANSFER
             value = input("Digite o valor a ser transferido: ")
@@ -205,6 +212,9 @@ def login():
             socketClient.send(bytes(" ".join([data,rg,value, dest]), 'utf-8')) # SEND DATA TO SERVER
 
             #data = socketClient.recv(BUFFER_SIZE) # RECEIVE DATA FROM SERVER
+            recv.waiting_response = True
+            while recv.waiting_response == True:
+                pass
 
         elif data == '4': 
             socketClient.send(bytes('4', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNECTION
