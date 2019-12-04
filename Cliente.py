@@ -17,54 +17,56 @@ class RecvThread(Thread):
         self.waiting_response = False
         self.saved_state = False
         self.messages = []
+        self.last_message = 'WAITING COMMAND'
 
     def run(self):
         while True:
             try:
                 data = socketClient.recv(BUFFER_SIZE).decode("utf-8").split(' ')
 
+                if data[0] != "save":
+                    self.last_message = data
+                    self.waiting_response = False
+                
+                if data[0] == 'QUERY':
+                    queryResponse(data)
+                if data[0] == 'WITHDRAWING':
+                    withdrawingResponse(data)
+                if data[0] == 'DEPOSITING':
+                    depositingResponse(data)
+                if data[0] == 'TRANSFER':
+                    transferResponse(data)
+                if data[0] == 'LOGOUT':
+                    socketClient.setblocking(True)
+                    break
                 if data[0] == "save":
                     self.recvMark()
-                else:
-                    if self.saved_state:
-                        self.messages.append(data)
-                    if data[0] == 'QUERY':
-                        queryResponse(data)
-                    if data[0] == 'WITHDRAWING':
-                        withdrawingResponse(data)
-                    if data[0] == 'DEPOSITING':
-                        depositingResponse(data)
-                    if data[0] == 'TRANSFER':
-                        transferResponse(data)
-                    if data[0] == 'LOGOUT':
-                        socketClient.setblocking(True)
-                        break
 
-                    if self.saved_state == False:
-                        self.sendMark()
-
-                    self.waiting_response = False
+                self.sendMark()
+                
+                
             except:
                 pass
     
     def resetState(self):
-        if self.saved_state:
-            time.sleep(10)
-            self.saved_state = False
+        time.sleep(10)
+        self.saved_state = False
 
     def sendMark(self):
-        print('\nMessagens no Canal: ', self.messages, '\n')
-        self.messages = [] 
-        self.saved_state = True
-        
-        socketClient.send(bytes('save', 'utf-8'))
-        reset = threading.Thread(target = self.resetState)
-        reset.start()
+        if not self.saved_state:
+            self.messages = []
+            socketClient.send(bytes('save', 'utf-8'))
+            print('Estado do Cliente: ', self.last_message, '\n')
 
+            self.saved_state = True
+            reset = threading.Thread(target = self.resetState)
+            reset.start()
 
     def recvMark(self):
-        if self.saved_state == False:
-            self.sendMark()                
+        if not self.saved_state:
+            self.sendMark()
+        else:
+            print('\nMessagens no Canal: ', self.messages, '\n')
 
         
 def handleRegister(statusCode):
@@ -219,6 +221,13 @@ def login():
         elif data == '4': 
             socketClient.send(bytes('4', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNECTION
             break
+        
+        elif data == 'save':
+            recv.recvMark()
+            recv.waiting_response = True
+            while recv.waiting_response == True:
+                pass
+            
         else:
             print('Operação inválida.')
 
@@ -266,10 +275,3 @@ socketClient.send(bytes('3', 'utf-8')) # SEND MESSAGE FOR SERVER TO CLOSE CONNEC
 print('\nAté a próxima!')
 
 socketClient.close()
-
-
-
-
-
-
-

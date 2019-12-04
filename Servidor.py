@@ -14,7 +14,8 @@ PORT = 5002
 BUFFER_SIZE = 2048
 threads = 0
 LIST_CLIENTS = []
-
+LOCKS = dict()
+saved_state = False
 # ----------
 
 class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
@@ -26,25 +27,48 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
         self.ip = ip
         self.port = port
         self.connection = connection
-        self.saved_state = False
         self.messages = []
+        self.last_message = ''
 
         print("Thread Cliente "+str(id)+" criada")
 
     def resetState(self):
+        global saved_state
+        
         time.sleep(10)
-        self.saved_state = False
+        saved_state = False
 
     def sendMark(self):
-        print('\nMessagens no Canal: ', self.messages, '\n')
-        self.messages = [] 
-        self.saved_state = True
-
         for conn in LIST_CLIENTS:
-            conn.send(bytes("save", "utf-8"))
+            conn.send(bytes('save', 'utf-8'))
+        self.messages = []
+        print('Estado do Servidor:', self.last_message, '\n')
 
         reset = threading.Thread(target = self.resetState)
         reset.start()
+        
+    def lock_threads(self, rgs):
+        for rg in rgs:
+            if not (rg in LOCKS):
+                LOCKS[rg] = threading.Lock()
+
+            LOCKS[rg].acquire()
+            print('Bloqueando RG', rg)
+        time.sleep(2)
+
+    def release_threads(self, rgs):
+        for rg in rgs:
+            print('Liberando RG', rg)
+            LOCKS[rg].release()
+
+    def recvMark(self):
+        global saved_state
+        if not saved_state:
+            saved_state = True
+            self.sendMark()
+        else:
+            print('\nMessagens no Canal do Cliente', self.id, ': ', self.messages, '\n')
+
     
     def run(self): # ----- EXECUTION OF EACH CLIENT THREAD -----
 
@@ -75,25 +99,45 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
             # ----- LOOP TO HANDLE OPERATIONS OF CLIENT -----
             data = ''
             self.messages = []
+            lock = threading.Lock()
+
             while True:
-                STATE = data
+                global LOCKS
+
                 data = self.connection.recv(BUFFER_SIZE).decode("utf-8").split(' ') # GET OPERATION SENDED BY CLIENT
-                self.messages.append(data)
+
+                if data[0] != 'save' and not saved_state:
+                    self.last_message = data
+
+                elif data[0] != 'save' and saved_state:
+                    self.messages.append(data)
 
                 if data[0] == '0': # OPERATION QUERY CASH
+                    self.lock_threads([data[1]])
                     res = Banco.queryCash(data[1]) # QUERY CASH MONEY
+                    self.release_threads([data[1]])
+
                     self.connection.send(bytes(" ".join(["QUERY" , str(res)]), "utf-8")) # SEND RESPONSE OF DATABASE TO CLIENT
 
                 elif data[0] == '1': # OPERATION WITHDRAW
+                    self.lock_threads([data[1]])
                     res = Banco.withdraw(data[1], int(data[2])) # WITHDRAWING MONEY
+                    self.release_threads([data[1]])
+
                     self.connection.send(bytes(" ".join(["WITHDRAWING" , str(res)]), "utf-8")) # SEND RESPONSE OF DATABASE TO CLIENT
 
                 elif data[0] == '2': # OPERATION DEPOSIT
+                    self.lock_threads([data[1]])
                     res = Banco.deposit(data[1], int(data[2])) # DEPOSITING MONEY
+                    self.release_threads([data[1]])
+
                     self.connection.send(bytes(" ".join(["DEPOSITING" , str(res)]), "utf-8")) # SEND RESPONSE OF DATABASE TO CLIENT
 
                 elif data[0] == '3': # OPERATION TRANSFER
+                    self.lock_threads([data[1], data[3]])
                     res = Banco.transfer(data[1], int(data[2]), data[3]) # TRANSFERING MONEY TO ANOTHER CLIENT
+                    self.release_threads([data[1], data[3]])
+
                     self.connection.send(bytes(" ".join(["TRANSFER" , str(res)]), "utf-8")) # SEND RESPONSE OF DATABASE TO CLIENT
 
                 elif data[0] == '4': # OPERATION LOGOUT
@@ -101,8 +145,8 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
                     break
 
                 elif data[0] == 'save':
-                    if self.saved_state == False:
-                        self.sendMark()
+                    self.recvMark()
+
 
                 else: # ANOTHER OPERATION CLOSES THE CONNECTION
                     print("Thread Cliente "+str(self.id)+" fechada")
@@ -110,6 +154,8 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
                     LIST_CLIENTS.remove(self.connection)
 
                     return
+
+
         
 
 
