@@ -111,6 +111,7 @@ class ClientThread(Thread): # ----- THREAD FOR A NEW CLIENT -----
 
                 elif data[0] != 'save' and saved_state:
                     self.messages.append(data)
+                    print('\nMessagens no Canal do Cliente', self.id, ': ', self.messages, '\n')
 
                 if data[0] == '0': # OPERATION QUERY CASH
                     self.lock_threads([data[1]])
